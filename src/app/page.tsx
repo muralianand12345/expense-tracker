@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import Image from 'next/image';
+import { Analytics } from "@vercel/analytics/next"
 import ThemeToggle from '@/components/ThemeToggle';
 
 export default function LandingPage() {
@@ -252,6 +252,7 @@ export default function LandingPage() {
                     </p>
                 </div>
             </footer>
+            <Analytics />
         </div>
     );
 }

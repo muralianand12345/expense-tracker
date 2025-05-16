@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { ExpenseSummary } from '@/types';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { generateChartColors, getMonthName } from '@/lib/utils';
 import { useCurrency } from '@/contexts/CurrencyContext';
