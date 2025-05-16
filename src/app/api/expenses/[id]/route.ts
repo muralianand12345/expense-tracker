@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { auth } from '@/auth/auth';
 
 // Validation schema for updating expense
 const updateExpenseSchema = z.object({
@@ -16,8 +17,20 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
-        const expense = await prisma.expense.findUnique({
-            where: { id: params.id },
+        // Get authenticated user
+        const session = await auth();
+        if (!session?.user) {
+            return NextResponse.json(
+                { error: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
+        const expense = await prisma.expense.findFirst({
+            where: {
+                id: params.id,
+                userId: session.user.id
+            },
         });
 
         if (!expense) {
@@ -43,14 +56,26 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
+        // Get authenticated user
+        const session = await auth();
+        if (!session?.user) {
+            return NextResponse.json(
+                { error: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
         const body = await request.json();
 
         // Validate the update data
         const validatedData = updateExpenseSchema.parse(body);
 
-        // Check if expense exists
-        const existingExpense = await prisma.expense.findUnique({
-            where: { id: params.id },
+        // Check if expense exists and belongs to the user
+        const existingExpense = await prisma.expense.findFirst({
+            where: {
+                id: params.id,
+                userId: session.user.id
+            },
         });
 
         if (!existingExpense) {
@@ -90,9 +115,21 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        // Check if expense exists
-        const existingExpense = await prisma.expense.findUnique({
-            where: { id: params.id },
+        // Get authenticated user
+        const session = await auth();
+        if (!session?.user) {
+            return NextResponse.json(
+                { error: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
+        // Check if expense exists and belongs to the user
+        const existingExpense = await prisma.expense.findFirst({
+            where: {
+                id: params.id,
+                userId: session.user.id
+            },
         });
 
         if (!existingExpense) {

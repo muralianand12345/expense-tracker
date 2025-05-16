@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Expense } from '@/types';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 interface ExpenseTableProps {
     expenses: Expense[];
@@ -11,6 +12,7 @@ interface ExpenseTableProps {
 
 export default function ExpenseTable({ expenses, onEdit, onDelete }: ExpenseTableProps) {
     const [expandedId, setExpandedId] = useState<string | null>(null);
+    const { formatAmount } = useCurrency();
 
     const toggleExpand = (id: string) => {
         setExpandedId(expandedId === id ? null : id);
@@ -77,7 +79,7 @@ export default function ExpenseTable({ expenses, onEdit, onDelete }: ExpenseTabl
                                 </span>
                             </td>
                             <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-300 text-right">
-                                ${expense.amount.toFixed(2)}
+                                {formatAmount(expense.amount)}
                             </td>
                             <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                                 <button

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { auth } from '@/auth/auth';
 
 // Validation schema for expense data
 const expenseSchema = z.object({
@@ -13,6 +14,15 @@ const expenseSchema = z.object({
 // GET all expenses
 export async function GET(request: NextRequest) {
     try {
+        // Get authenticated user
+        const session = await auth();
+        if (!session?.user) {
+            return NextResponse.json(
+                { error: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
         const { searchParams } = new URL(request.url);
 
         // Filter by category if provided
@@ -22,7 +32,9 @@ export async function GET(request: NextRequest) {
         const startDate = searchParams.get('startDate');
         const endDate = searchParams.get('endDate');
 
-        let whereClause: any = {};
+        let whereClause: any = {
+            userId: session.user.id,
+        };
 
         if (category) {
             whereClause.category = category;
@@ -55,14 +67,26 @@ export async function GET(request: NextRequest) {
 // POST a new expense
 export async function POST(request: NextRequest) {
     try {
+        // Get authenticated user
+        const session = await auth();
+        if (!session?.user) {
+            return NextResponse.json(
+                { error: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
         const body = await request.json();
 
         // Validate the expense data
         const validatedData = expenseSchema.parse(body);
 
-        // Create the expense in the database
+        // Create the expense in the database with the user ID
         const expense = await prisma.expense.create({
-            data: validatedData,
+            data: {
+                ...validatedData,
+                userId: session.user.id,
+            },
         });
 
         return NextResponse.json(expense, { status: 201 });
