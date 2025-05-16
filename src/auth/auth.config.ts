@@ -23,12 +23,25 @@ export const authConfig: NextAuthConfig = {
             }
             return true;
         },
-        session({ session, user }) {
-            if (session.user) {
-                session.user.id = user.id;
-                session.user.currency = user.currency;
+        session({ session, token }) {
+            if (session.user && token.sub) {
+                session.user.id = token.sub;
+                // Add any other fields from token if needed, like:
+                if (token.currency) {
+                    session.user.currency = token.currency as string;
+                } else {
+                    session.user.currency = 'USD'; // Default currency
+                }
             }
             return session;
         },
-    },
+        jwt({ token, user }) {
+            // Add user data to the token when first signing in
+            if (user) {
+                token.sub = user.id;
+                token.currency = user.currency || 'USD';
+            }
+            return token;
+        }
+    }
 };

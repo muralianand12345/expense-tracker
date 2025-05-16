@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { debugLog } from '@/lib/debug';
 
 interface CurrencySelectorProps {
     onCurrencyChange: (currency: string) => void;
@@ -20,41 +20,14 @@ const CURRENCIES = [
 ];
 
 export default function CurrencySelector({ onCurrencyChange }: CurrencySelectorProps) {
-    const { data: session } = useSession();
-    const [selectedCurrency, setSelectedCurrency] = useState(session?.user?.currency || 'USD');
-    const [isLoading, setIsLoading] = useState(false);
+    const { currency, isLoading } = useCurrency();
 
-    useEffect(() => {
-        if (session?.user?.currency) {
-            setSelectedCurrency(session.user.currency);
-        }
-    }, [session]);
+    debugLog('CurrencySelector rendering with currency:', currency);
 
-    const handleCurrencyChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const currency = e.target.value;
-        setSelectedCurrency(currency);
-        setIsLoading(true);
-
-        try {
-            const response = await fetch('/api/user/currency', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ currency }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to update currency');
-            }
-
-            // Call the parent component's handler
-            onCurrencyChange(currency);
-        } catch (error) {
-            console.error('Error updating currency:', error);
-        } finally {
-            setIsLoading(false);
-        }
+    const handleCurrencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const newCurrency = e.target.value;
+        debugLog('Currency selected by user:', newCurrency);
+        onCurrencyChange(newCurrency);
     };
 
     return (
@@ -65,14 +38,15 @@ export default function CurrencySelector({ onCurrencyChange }: CurrencySelectorP
                 </div>
             )}
             <select
-                value={selectedCurrency}
+                value={currency}
                 onChange={handleCurrencyChange}
-                className="block w-full pl-3 pr-10 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-gray-100"
+                disabled={isLoading}
+                className="block w-full pl-3 pr-10 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-gray-100 disabled:opacity-70"
                 aria-label="Select currency"
             >
-                {CURRENCIES.map((currency) => (
-                    <option key={currency.code} value={currency.code}>
-                        {currency.symbol} - {currency.code} ({currency.name})
+                {CURRENCIES.map((curr) => (
+                    <option key={curr.code} value={curr.code}>
+                        {curr.symbol} - {curr.code} ({curr.name})
                     </option>
                 ))}
             </select>
