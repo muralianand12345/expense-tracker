@@ -7,6 +7,7 @@ import ExpenseTable from '@/components/ExpenseTable';
 import ExpenseModal from '@/components/ExpenseModal';
 import ExpenseFilter from '@/components/ExpenseFilter';
 import MonthlySummary from '@/components/MonthlySummary';
+import InvoiceUploader from '@/components/InvoiceUploader';
 import { downloadCSV } from '@/lib/utils';
 import { useCurrency } from '@/contexts/CurrencyContext';
 
@@ -27,6 +28,7 @@ export default function Dashboard() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [currentExpense, setCurrentExpense] = useState<Expense | null>(null);
     const [activeTab, setActiveTab] = useState<'list' | 'summary'>('list');
+    const [showInvoiceUploader, setShowInvoiceUploader] = useState(false);
 
     useEffect(() => {
         fetchExpenses();
@@ -92,6 +94,11 @@ export default function Dashboard() {
         downloadCSV(formattedExpenses, 'expenses.csv');
     };
 
+    // Toggle invoice uploader visibility
+    const toggleInvoiceUploader = () => {
+        setShowInvoiceUploader(!showInvoiceUploader);
+    };
+
     return (
         <div>
             <div className="flex justify-between items-center mb-6">
@@ -109,6 +116,16 @@ export default function Dashboard() {
                     </button>
                     <button
                         type="button"
+                        onClick={toggleInvoiceUploader}
+                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:bg-green-700 dark:hover:bg-green-800"
+                    >
+                        <svg className="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                        </svg>
+                        {showInvoiceUploader ? 'Hide Scanner' : 'Scan Invoice'}
+                    </button>
+                    <button
+                        type="button"
                         onClick={handleExportCSV}
                         className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                     >
@@ -119,6 +136,9 @@ export default function Dashboard() {
                     </button>
                 </div>
             </div>
+
+            {/* Invoice Uploader */}
+            {showInvoiceUploader && <InvoiceUploader />}
 
             <div className="mb-6">
                 <div className="border-b border-gray-200 dark:border-gray-700">
