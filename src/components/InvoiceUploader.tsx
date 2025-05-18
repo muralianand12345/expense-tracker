@@ -28,57 +28,64 @@ export default function InvoiceUploader() {
         }
     };
 
-    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    // Use a simpler file input approach
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        // Reset previous errors
+        setError(null);
+
+        console.log("File input change event triggered");
+
+        // Check if we have files
+        const files = event.target.files;
+        if (!files || files.length === 0) {
+            console.log("No files selected");
+            setError('Please select an image file');
+            return;
+        }
+
+        const file = files[0];
+        console.log("Selected file:", {
+            name: file.name,
+            type: file.type,
+            size: file.size
+        });
+
+        // Create a preview
         try {
-            const files = event.target.files;
-            if (!files || files.length === 0) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                if (e.target?.result) {
+                    setPreviewImage(e.target.result as string);
+                }
+            };
+            reader.readAsDataURL(file);
+        } catch (err) {
+            console.error("Error creating preview:", err);
+        }
 
-            resetState();
-            const file = files[0];
+        // Process the file
+        await processFile(file);
+    };
 
-            // Debug file information
-            console.log("File info:", {
-                name: file?.name || 'unknown',
-                type: file?.type || 'unknown',
-                size: (file?.size || 0) + ' bytes'
-            });
-
-            // Ensure the file exists
-            if (!file) {
-                setError('No file selected');
-                return;
-            }
-
-            // Skip all checks and assume it's a valid image
-            // Create a preview of the image
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    if (e.target?.result) {
-                        setPreviewImage(e.target.result as string);
-                    }
-                };
-                reader.readAsDataURL(file);
-            }
-
+    const processFile = async (file: File) => {
+        try {
             setIsUploading(true);
-            setUploadProgress(10);
-            setError(null);
+            setUploadProgress(20);
 
-            // Create a FormData object to send the file
+            // Create FormData
             const formData = new FormData();
-            formData.append('invoice', file, file.name || 'invoice.png');
+            formData.append('invoice', file);
             formData.append('targetCurrency', currency);
 
-            setUploadProgress(30);
+            setUploadProgress(40);
 
-            // Send the file to the API endpoint
+            // Send to API
             const response = await fetch('/api/invoices/process', {
                 method: 'POST',
-                body: formData,
+                body: formData
             });
 
-            setUploadProgress(70);
+            setUploadProgress(80);
 
             if (!response.ok) {
                 const errorData = await response.json();
@@ -86,30 +93,58 @@ export default function InvoiceUploader() {
             }
 
             const responseData = await response.json();
+            console.log("API response:", responseData);
 
             setUploadProgress(100);
 
-            // Extract and map data
+            // Process the response
             const processed: ProcessedInvoice = {
                 date: formatInvoiceDate(responseData.date),
                 type: mapInvoiceCategory(responseData.type),
                 amount: responseData.amount,
                 currency: responseData.currency,
                 description: responseData.description,
-                // Store original values if conversion happened
                 originalAmount: responseData.originalAmount,
                 originalCurrency: responseData.originalCurrency,
                 conversionRate: responseData.conversionRate
             };
 
-            // Set the invoice data for preview
             setInvoiceData(processed);
-            setIsUploading(false);
+
         } catch (err) {
-            console.error('Error processing invoice:', err);
-            setError(err instanceof Error ? err.message : 'Unknown error occurred');
+            console.error("Error processing file:", err);
+            setError(err instanceof Error ? err.message : 'Failed to process invoice');
+        } finally {
             setIsUploading(false);
-            setUploadProgress(0);
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const file = e.dataTransfer.files[0];
+
+            // Create a preview
+            try {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    if (e.target?.result) {
+                        setPreviewImage(e.target.result as string);
+                    }
+                };
+                reader.readAsDataURL(file);
+            } catch (err) {
+                console.error("Error creating preview:", err);
+            }
+
+            await processFile(file);
         }
     };
 
@@ -198,63 +233,63 @@ export default function InvoiceUploader() {
                 <div>
                     {!invoiceData ? (
                         <div className="mt-1">
-                            <label
-                                htmlFor="invoice-upload"
-                                className={`flex justify-center w-full h-64 px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 ${isUploading ? 'bg-gray-100 dark:bg-gray-700 border-indigo-300 dark:border-indigo-600' : 'border-dashed'
-                                    } rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800`}
+                            {/* Simplified upload area */}
+                            <div
+                                className={`flex flex-col justify-center items-center w-full h-64 px-6 py-5 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md ${isUploading ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
+                                onDragOver={handleDragOver}
+                                onDrop={handleDrop}
                             >
-                                <div className="space-y-1 text-center flex flex-col items-center justify-center">
-                                    {isUploading ? (
-                                        <div className="w-full">
-                                            <div className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                Processing invoice... {uploadProgress}%
-                                            </div>
-                                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                                                <div
-                                                    className="bg-indigo-600 dark:bg-indigo-500 h-2.5 rounded-full transition-all duration-300 ease-in-out"
-                                                    style={{ width: `${uploadProgress}%` }}
-                                                ></div>
-                                            </div>
+                                {isUploading ? (
+                                    <div className="w-full">
+                                        <div className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                            Processing invoice... {uploadProgress}%
                                         </div>
-                                    ) : (
-                                        <>
-                                            <svg
-                                                className="mx-auto h-12 w-12 text-gray-400"
-                                                stroke="currentColor"
-                                                fill="none"
-                                                viewBox="0 0 48 48"
-                                                aria-hidden="true"
+                                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                                            <div
+                                                className="bg-indigo-600 dark:bg-indigo-500 h-2.5 rounded-full transition-all duration-300 ease-in-out"
+                                                style={{ width: `${uploadProgress}%` }}
+                                            ></div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <svg
+                                            className="mx-auto h-12 w-12 text-gray-400"
+                                            stroke="currentColor"
+                                            fill="none"
+                                            viewBox="0 0 48 48"
+                                            aria-hidden="true"
+                                        >
+                                            <path
+                                                d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                                                strokeWidth={2}
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                            />
+                                        </svg>
+                                        <div className="flex flex-col items-center mt-4">
+                                            <button
+                                                onClick={() => fileInputRef.current?.click()}
+                                                type="button"
+                                                className="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                             >
-                                                <path
-                                                    d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                                                    strokeWidth={2}
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                />
-                                            </svg>
-                                            <div className="flex text-sm text-gray-600 dark:text-gray-400">
-                                                <span className="relative rounded-md font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
-                                                    Upload an invoice image
-                                                </span>
-                                                <p className="pl-1">or drag and drop</p>
-                                            </div>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                We'll automatically extract the information
+                                                Select Image
+                                            </button>
+                                            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                                                or drag and drop here
                                             </p>
-                                        </>
-                                    )}
-                                </div>
-                            </label>
-                            <input
-                                id="invoice-upload"
-                                name="invoice-upload"
-                                type="file"
-                                accept="image/*"
-                                onChange={handleFileUpload}
-                                disabled={isUploading}
-                                className="sr-only"
-                                ref={fileInputRef}
-                            />
+                                        </div>
+
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleFileChange}
+                                            ref={fileInputRef}
+                                            className="hidden"
+                                        />
+                                    </>
+                                )}
+                            </div>
                         </div>
                     ) : (
                         <div className="mt-1">
@@ -279,7 +314,10 @@ export default function InvoiceUploader() {
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => fileInputRef.current?.click()}
+                                    onClick={() => {
+                                        resetState();
+                                        fileInputRef.current?.click();
+                                    }}
                                     className="py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                                 >
                                     Upload Different Image

@@ -138,25 +138,37 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Try to get formData
+        let formData;
+        try {
+            formData = await request.formData();
+        } catch (error) {
+            console.error("Failed to parse form data:", error);
+            return NextResponse.json(
+                { error: 'Failed to parse form data' },
+                { status: 400 }
+            );
+        }
+
         // Get target currency from request or use USD as default
-        const formData = await request.formData();
         const targetCurrency = formData.get('targetCurrency')?.toString() || session.user.currency || 'USD';
 
-        const invoiceFile = formData.get('invoice') as File;
-
-        if (!invoiceFile) {
+        // Check if we have a file in the request
+        const invoiceFile = formData.get('invoice');
+        if (!invoiceFile || !(invoiceFile instanceof File)) {
+            console.error("No invoice file or invalid file in request:", invoiceFile);
             return NextResponse.json(
-                { error: 'No invoice file provided' },
+                { error: 'No invoice file provided or invalid file' },
                 { status: 400 }
             );
         }
 
         // Debug file information
         console.log("API received file:", {
-            name: invoiceFile?.name || 'unknown',
-            type: invoiceFile?.type || 'unknown',
-            extension: getFileExtension(invoiceFile?.name),
-            size: (invoiceFile?.size || 0) + ' bytes'
+            name: invoiceFile.name || 'unnamed file',
+            type: invoiceFile.type || 'unknown type',
+            extension: getFileExtension(invoiceFile.name || ''),
+            size: invoiceFile.size + ' bytes'
         });
 
         // More permissive check for image files
@@ -164,10 +176,20 @@ export async function POST(request: NextRequest) {
         const hasImageExtension = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(invoiceFile.name);
 
         // Convert the file to a buffer
-        const arrayBuffer = await invoiceFile.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
+        let buffer: Buffer;
+        try {
+            const arrayBuffer = await invoiceFile.arrayBuffer();
+            buffer = Buffer.from(arrayBuffer);
+            console.log("Successfully created buffer from file, size:", buffer.length);
+        } catch (error) {
+            console.error("Failed to create buffer from file:", error);
+            return NextResponse.json(
+                { error: 'Failed to process uploaded file' },
+                { status: 400 }
+            );
+        }
 
-        // Additional verification by checking file headers
+        // Additional verification by checking file headers - ONLY if other checks fail
         if (!isImageType && !hasImageExtension) {
             const isImage = await isImageBuffer(buffer);
             if (!isImage) {
