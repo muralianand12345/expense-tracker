@@ -5,8 +5,9 @@ import { Menu, Transition } from '@headlessui/react';
 import { signOut, useSession } from 'next-auth/react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { cn } from '@/lib/utils/tailwind';
 
-export default function UserMenu() {
+export function UserMenu() {
     const { data: session } = useSession();
 
     if (!session?.user) {
@@ -23,7 +24,7 @@ export default function UserMenu() {
     return (
         <Menu as="div" className="relative ml-3">
             <div>
-                <Menu.Button className="flex rounded-full bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800">
+                <Menu.Button className="flex rounded-full bg-indigo-700 dark:bg-indigo-900 text-sm focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-indigo-600">
                     <span className="sr-only">Open user menu</span>
                     {session.user.image ? (
                         <Image
@@ -34,7 +35,7 @@ export default function UserMenu() {
                             height={32}
                         />
                     ) : (
-                        <div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center text-white">
+                        <div className="h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center text-white">
                             {(session.user.name || 'User')[0].toUpperCase()}
                         </div>
                     )}
@@ -58,9 +59,11 @@ export default function UserMenu() {
                     <Menu.Item>
                         {({ active }) => (
                             <Link
-                                href="/app/settings"
-                                className={`${active ? 'bg-gray-100 dark:bg-gray-700' : ''
-                                    } block px-4 py-2 text-sm text-gray-700 dark:text-gray-200`}
+                                href="/settings"
+                                className={cn(
+                                    active ? 'bg-gray-100 dark:bg-gray-700' : '',
+                                    'block px-4 py-2 text-sm text-gray-700 dark:text-gray-200'
+                                )}
                             >
                                 Settings
                             </Link>
@@ -71,8 +74,10 @@ export default function UserMenu() {
                         {({ active }) => (
                             <button
                                 onClick={() => signOut({ callbackUrl: '/' })}
-                                className={`${active ? 'bg-gray-100 dark:bg-gray-700' : ''
-                                    } block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200`}
+                                className={cn(
+                                    active ? 'bg-gray-100 dark:bg-gray-700' : '',
+                                    'block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200'
+                                )}
                             >
                                 Sign out
                             </button>

@@ -1,30 +1,25 @@
-// src/app/api/expenses/route.ts - Updated with better error handling
-
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { auth } from '@/auth/auth';
+import { EXPENSE_CATEGORIES } from '@/types';
 
 // Validation schema for expense data
 const expenseSchema = z.object({
     amount: z.number().positive(),
     description: z.string().min(1),
     date: z.string().transform(val => new Date(val)),
-    category: z.string().min(1),
+    category: z.enum(EXPENSE_CATEGORIES),
 });
 
-// GET all expenses
+/**
+ * GET handler for fetching expenses with optional filters
+ */
 export async function GET(request: NextRequest) {
     try {
         // Get authenticated user
-        console.log('GET expenses - Fetching auth session...');
         const session = await auth();
-
-        console.log('GET expenses - Session received:',
-            session ? `User: ${session.user?.email} (${session.user?.id})` : 'No session');
-
         if (!session?.user) {
-            console.log('GET expenses - No authenticated user found');
             return NextResponse.json(
                 { error: 'Unauthorized' },
                 { status: 401 }
@@ -33,43 +28,37 @@ export async function GET(request: NextRequest) {
 
         const { searchParams } = new URL(request.url);
 
-        // Filter by category if provided
-        const category = searchParams.get('category');
-
-        // Filter by date range if provided
-        const startDate = searchParams.get('startDate');
-        const endDate = searchParams.get('endDate');
-
+        // Build where clause with filters
         let whereClause: any = {
             userId: session.user.id,
         };
 
+        // Filter by category if provided
+        const category = searchParams.get('category');
         if (category) {
             whereClause.category = category;
         }
+
+        // Filter by date range if provided
+        const startDate = searchParams.get('startDate');
+        const endDate = searchParams.get('endDate');
 
         if (startDate && endDate) {
             whereClause.date = {
                 gte: new Date(startDate),
                 lte: new Date(endDate),
             };
+        } else if (startDate) {
+            whereClause.date = {
+                gte: new Date(startDate),
+            };
+        } else if (endDate) {
+            whereClause.date = {
+                lte: new Date(endDate),
+            };
         }
 
-        console.log('GET expenses - Querying database with where clause:', JSON.stringify(whereClause));
-
-        // Check if the expenses table exists
-        try {
-            // Try a light query first to check if the table exists
-            await prisma.$queryRaw`SELECT 1 FROM "expenses" LIMIT 1`;
-            console.log('GET expenses - Expenses table exists');
-        } catch (tableError) {
-            console.error('GET expenses - Error checking expenses table:', tableError);
-            return NextResponse.json(
-                { error: 'Database table missing. Please run `npx prisma db push`' },
-                { status: 500 }
-            );
-        }
-
+        // Query the database
         const expenses = await prisma.expense.findMany({
             where: whereClause,
             orderBy: {
@@ -77,60 +66,36 @@ export async function GET(request: NextRequest) {
             },
         });
 
-        console.log(`GET expenses - Successfully fetched ${expenses.length} expenses`);
-
         return NextResponse.json(expenses);
     } catch (error) {
         console.error('Error fetching expenses:', error);
 
-        let errorMessage = 'Failed to fetch expenses';
-        let statusCode = 500;
-
-        if (error instanceof Error) {
-            errorMessage = error.message;
-
-            // Add more specific error handling based on error types
-            if (error.message.includes('database')) {
-                errorMessage = 'Database connection error. Please check your database configuration';
-            } else if (error.message.includes('permission')) {
-                errorMessage = 'Database permission error';
-                statusCode = 403;
-            }
-        }
-
         return NextResponse.json(
-            { error: errorMessage },
-            { status: statusCode }
+            { error: 'Failed to fetch expenses' },
+            { status: 500 }
         );
     }
 }
 
-// POST a new expense
+/**
+ * POST handler for creating a new expense
+ */
 export async function POST(request: NextRequest) {
     try {
         // Get authenticated user
-        console.log('POST expense - Fetching auth session...');
         const session = await auth();
-
-        console.log('POST expense - Session received:',
-            session ? `User: ${session.user?.email} (${session.user?.id})` : 'No session');
-
         if (!session?.user?.id) {
-            console.log('POST expense - No authenticated user found');
             return NextResponse.json(
                 { error: 'Unauthorized' },
                 { status: 401 }
             );
         }
 
+        // Parse and validate request body
         const body = await request.json();
-        console.log('POST expense - Request body:', JSON.stringify(body));
-
-        // Validate the expense data
         const validatedData = expenseSchema.parse(body);
 
-        // Create the expense in the database with the user ID
-        console.log('POST expense - Creating expense for user:', session.user.id);
+        // Create the expense in the database
         const expense = await prisma.expense.create({
             data: {
                 ...validatedData,
@@ -138,7 +103,6 @@ export async function POST(request: NextRequest) {
             },
         });
 
-        console.log('POST expense - Successfully created expense:', expense.id);
         return NextResponse.json(expense, { status: 201 });
     } catch (error) {
         console.error('Error creating expense:', error);
@@ -150,21 +114,9 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        let errorMessage = 'Failed to create expense';
-        let statusCode = 500;
-
-        if (error instanceof Error) {
-            // Add more specific error handling
-            if (error.message.includes('foreignkey')) {
-                errorMessage = 'User not found in database. Try signing out and back in.';
-            } else if (error.message.includes('database')) {
-                errorMessage = 'Database connection error. Please check your configuration.';
-            }
-        }
-
         return NextResponse.json(
-            { error: errorMessage },
-            { status: statusCode }
+            { error: 'Failed to create expense' },
+            { status: 500 }
         );
     }
 }

@@ -2,16 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { auth } from '@/auth/auth';
+import { EXPENSE_CATEGORIES } from '@/types';
 
 // Validation schema for updating expense
 const updateExpenseSchema = z.object({
     amount: z.number().positive().optional(),
     description: z.string().min(1).optional(),
     date: z.string().transform(val => new Date(val)).optional(),
-    category: z.string().min(1).optional(),
+    category: z.enum(EXPENSE_CATEGORIES).optional(),
 });
 
-// GET a single expense by ID
+/**
+ * GET handler to fetch a single expense
+ */
 export async function GET(
     request: NextRequest,
     { params }: { params: { id: string } }
@@ -26,10 +29,11 @@ export async function GET(
             );
         }
 
+        // Find the expense
         const expense = await prisma.expense.findFirst({
             where: {
                 id: params.id,
-                userId: session.user.id
+                userId: session.user.id, // Ensure the expense belongs to the user
             },
         });
 
@@ -50,7 +54,9 @@ export async function GET(
     }
 }
 
-// PUT (update) an expense
+/**
+ * PUT handler to update an expense
+ */
 export async function PUT(
     request: NextRequest,
     { params }: { params: { id: string } }
@@ -65,16 +71,15 @@ export async function PUT(
             );
         }
 
+        // Validate the request body
         const body = await request.json();
-
-        // Validate the update data
         const validatedData = updateExpenseSchema.parse(body);
 
         // Check if expense exists and belongs to the user
         const existingExpense = await prisma.expense.findFirst({
             where: {
                 id: params.id,
-                userId: session.user.id
+                userId: session.user.id,
             },
         });
 
@@ -109,7 +114,9 @@ export async function PUT(
     }
 }
 
-// DELETE an expense
+/**
+ * DELETE handler to remove an expense
+ */
 export async function DELETE(
     request: NextRequest,
     { params }: { params: { id: string } }
@@ -128,7 +135,7 @@ export async function DELETE(
         const existingExpense = await prisma.expense.findFirst({
             where: {
                 id: params.id,
-                userId: session.user.id
+                userId: session.user.id,
             },
         });
 

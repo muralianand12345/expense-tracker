@@ -1,209 +1,123 @@
-// src/store/useExpenseStore.ts - Updated with better error handling and debugging
-
 import { create } from 'zustand';
-import { Expense, ExpenseSummary } from '@/types';
+import { Expense, ExpenseCreateInput, ExpenseFilters, ExpenseSummary, ExpenseUpdateInput } from '@/types';
+import * as expenseApi from '@/lib/api/expenses';
 
 interface ExpenseState {
+    // Data
     expenses: Expense[];
     summary: ExpenseSummary | null;
+
+    // UI States
     isLoading: boolean;
     error: string | null;
+    activeExpenseId: string | null;
 
     // Actions
-    fetchExpenses: (category?: string, startDate?: string, endDate?: string) => Promise<void>;
+    fetchExpenses: (filters?: ExpenseFilters) => Promise<void>;
     fetchSummary: (month?: number, year?: number) => Promise<void>;
-    addExpense: (expense: Omit<Expense, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-    updateExpense: (id: string, expense: Partial<Expense>) => Promise<void>;
-    deleteExpense: (id: string) => Promise<void>;
+    addExpense: (expense: ExpenseCreateInput) => Promise<boolean>;
+    updateExpense: (id: string, expense: ExpenseUpdateInput) => Promise<boolean>;
+    deleteExpense: (id: string) => Promise<boolean>;
+    setActiveExpense: (id: string | null) => void;
+    clearError: () => void;
 }
 
 export const useExpenseStore = create<ExpenseState>((set, get) => ({
+    // Initial state
     expenses: [],
     summary: null,
     isLoading: false,
     error: null,
+    activeExpenseId: null,
 
-    // Fetch all expenses with optional filters
-    fetchExpenses: async (category, startDate, endDate) => {
+    // Set active expense for editing or viewing details
+    setActiveExpense: (id) => set({ activeExpenseId: id }),
+
+    // Clear error message
+    clearError: () => set({ error: null }),
+
+    // Fetch expenses with optional filters
+    fetchExpenses: async (filters) => {
         set({ isLoading: true, error: null });
-        try {
-            let url = '/api/expenses';
-            const params = new URLSearchParams();
 
-            if (category) params.append('category', category);
-            if (startDate) params.append('startDate', startDate);
-            if (endDate) params.append('endDate', endDate);
+        const response = await expenseApi.fetchExpenses(filters);
 
-            if (params.toString()) {
-                url += `?${params.toString()}`;
-            }
-
-            console.log('Fetching expenses from:', url);
-
-            const response = await fetch(url, {
-                credentials: 'include' // Important: Include credentials
-            });
-
-            console.log('Expense fetch response status:', response.status);
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                console.error('Error fetching expenses:', errorData);
-                throw new Error(errorData.error || 'Failed to fetch expenses');
-            }
-
-            const data = await response.json();
-            console.log(`Fetched ${data.length} expenses successfully`);
-            set({ expenses: data, isLoading: false });
-        } catch (error) {
-            console.error('Error in fetchExpenses:', error);
-            set({
-                error: error instanceof Error ? error.message : 'Unknown error fetching expenses',
-                isLoading: false
-            });
+        if (response.success) {
+            set({ expenses: response.data, isLoading: false });
+            return;
         }
+
+        set({ error: response.error, isLoading: false });
     },
 
     // Fetch monthly summary
     fetchSummary: async (month, year) => {
         set({ isLoading: true, error: null });
-        try {
-            let url = '/api/expenses/summary';
-            const params = new URLSearchParams();
 
-            if (month) params.append('month', month.toString());
-            if (year) params.append('year', year.toString());
+        const response = await expenseApi.fetchExpenseSummary(month, year);
 
-            if (params.toString()) {
-                url += `?${params.toString()}`;
-            }
-
-            console.log('Fetching summary from:', url);
-
-            const response = await fetch(url, {
-                credentials: 'include'
-            });
-
-            console.log('Summary fetch response status:', response.status);
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                console.error('Error fetching summary:', errorData);
-                throw new Error(errorData.error || 'Failed to fetch summary');
-            }
-
-            const data = await response.json();
-            console.log('Summary fetched successfully:', data);
-            set({ summary: data, isLoading: false });
-        } catch (error) {
-            console.error('Error in fetchSummary:', error);
-            set({
-                error: error instanceof Error ? error.message : 'Unknown error fetching summary',
-                isLoading: false
-            });
+        if (response.success) {
+            set({ summary: response.data, isLoading: false });
+            return;
         }
+
+        set({ error: response.error, isLoading: false });
     },
 
-    // Add a new expense
+    // Add new expense
     addExpense: async (expense) => {
         set({ isLoading: true, error: null });
-        try {
-            console.log('Adding expense:', expense);
 
-            const response = await fetch('/api/expenses', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(expense),
-                credentials: 'include'
-            });
+        const response = await expenseApi.createExpense(expense);
 
-            console.log('Add expense response status:', response.status);
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                console.error('Error adding expense:', errorData);
-                throw new Error(errorData.error || 'Failed to add expense');
-            }
-
-            // Refetch expenses to update the list
+        if (response.success) {
+            // Refetch expenses to get the updated list with the new expense
             await get().fetchExpenses();
             set({ isLoading: false });
-        } catch (error) {
-            console.error('Error in addExpense:', error);
-            set({
-                error: error instanceof Error ? error.message : 'Unknown error adding expense',
-                isLoading: false
-            });
+            return true;
         }
+
+        set({ error: response.error, isLoading: false });
+        return false;
     },
 
-    // Update an existing expense
+    // Update existing expense
     updateExpense: async (id, expense) => {
         set({ isLoading: true, error: null });
-        try {
-            console.log('Updating expense:', id, expense);
 
-            const response = await fetch(`/api/expenses/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(expense),
-                credentials: 'include'
-            });
+        const response = await expenseApi.updateExpense(id, expense);
 
-            console.log('Update expense response status:', response.status);
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                console.error('Error updating expense:', errorData);
-                throw new Error(errorData.error || 'Failed to update expense');
-            }
-
-            // Refetch expenses to update the list
-            await get().fetchExpenses();
-            set({ isLoading: false });
-        } catch (error) {
-            console.error('Error in updateExpense:', error);
-            set({
-                error: error instanceof Error ? error.message : 'Unknown error updating expense',
+        if (response.success) {
+            // Update the expense in the local state
+            set(state => ({
+                expenses: state.expenses.map(e =>
+                    e.id === id ? { ...e, ...expense } : e
+                ),
                 isLoading: false
-            });
+            }));
+            return true;
         }
+
+        set({ error: response.error, isLoading: false });
+        return false;
     },
 
-    // Delete an expense
+    // Delete expense
     deleteExpense: async (id) => {
         set({ isLoading: true, error: null });
-        try {
-            console.log('Deleting expense:', id);
 
-            const response = await fetch(`/api/expenses/${id}`, {
-                method: 'DELETE',
-                credentials: 'include'
-            });
+        const response = await expenseApi.deleteExpense(id);
 
-            console.log('Delete expense response status:', response.status);
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                console.error('Error deleting expense:', errorData);
-                throw new Error(errorData.error || 'Failed to delete expense');
-            }
-
-            // Update the local state by removing the deleted expense
+        if (response.success) {
+            // Remove the expense from the local state
             set(state => ({
                 expenses: state.expenses.filter(expense => expense.id !== id),
-                isLoading: false,
-            }));
-        } catch (error) {
-            console.error('Error in deleteExpense:', error);
-            set({
-                error: error instanceof Error ? error.message : 'Unknown error deleting expense',
                 isLoading: false
-            });
+            }));
+            return true;
         }
-    },
+
+        set({ error: response.error, isLoading: false });
+        return false;
+    }
 }));

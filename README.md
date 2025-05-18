@@ -1,113 +1,99 @@
 # Personal Expense Tracker
 
-A full-stack Next.js application for tracking personal expenses with a clean, responsive UI and data visualization.
+A modern, full-stack expense tracking application built with Next.js, TypeScript, Prisma, and Tailwind CSS.
 
 ## Features
 
-- **Add, View, Edit, and Delete Expenses**: Complete CRUD operations
-- **Categorize Expenses**: Organize expenses by categories
-- **Filter Expenses**: Filter by date range and category
-- **Monthly Summary**: View total expenses, breakdown by category with charts
-- **Export Data**: Export expense data to CSV
-- **Dark Mode**: Toggle between light and dark themes
-- **Responsive Design**: Works on all device sizes
+- **User Authentication**: Sign in with Google OAuth
+- **Expense Management**: Add, edit, and delete expenses
+- **Categorization**: Organize expenses by category
+- **Filtering**: Filter expenses by date range and category
+- **Data Visualization**: View spending trends with charts
+- **Dark Mode Support**: Toggle between light and dark themes
+- **Multiple Currency Support**: Track expenses in different currencies
+- **Responsive Design**: Works on mobile, tablet, and desktop
 
 ## Tech Stack
 
 - **Frontend**: Next.js with App Router
-- **Language**: TypeScript
+- **Database**: PostgreSQL with Prisma ORM
+- **Authentication**: NextAuth.js
 - **Styling**: Tailwind CSS
 - **Forms**: React Hook Form with Zod validation
-- **Database**: PostgreSQL with Prisma ORM
 - **State Management**: Zustand
 - **Charts**: Recharts
+- **TypeScript**: For type safety
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js (version 16.x or later)
-- PostgreSQL database (You can use NeonDB for cloud hosting)
+- Node.js (v18+ recommended)
+- PostgreSQL database
 
 ### Installation
 
 1. Clone the repository:
-
-```bash
-git clone <repository-url>
-cd expense-tracker
-```
+   ```bash
+   git clone https://github.com/yourusername/expense-tracker.git
+   cd expense-tracker
+   ```
 
 2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-```bash
-npm install
-```
+3. Set up environment variables:
+   Copy the `.env.example` file to `.env.local` and update the values:
+   ```bash
+   cp .env.example .env.local
+   ```
+   Then edit `.env.local` with your database and OAuth credentials.
 
-3. Set up your environment variables:
-
-Create a `.env` file in the root directory with the following content:
-
-```
-DATABASE_URL="postgresql://username:password@your-neondb-host:5432/expense-tracker?schema=public"
-```
-
-Replace the placeholder values with your actual database credentials.
-
-4. Initialize the database:
-
-```bash
-npx prisma db push
-```
+4. Set up the database:
+   ```bash
+   npx prisma migrate dev --name init
+   npx prisma db seed
+   ```
 
 5. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-```bash
-npm run dev
-```
-
-6. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
-
-## Deployment
-
-### Database Setup
-
-1. Create a PostgreSQL database on NeonDB (or any other provider)
-2. Update your `.env` file with the production database URL
-
-### Deploying to Vercel
-
-1. Push your code to a GitHub repository
-2. Create a new project on Vercel
-3. Connect your GitHub repository to Vercel
-4. Add your environment variables in the Vercel dashboard
-5. Deploy!
+6. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Project Structure
 
 ```
-expense-tracker/
-├── app/                   # Next.js app router
-│   ├── api/               # API endpoints
-│   │   └── expenses/      # Expense-related endpoints
-│   ├── layout.tsx         # Root layout
-│   └── page.tsx           # Main page
-├── components/            # UI components
-├── lib/                   # Utility functions
-├── prisma/                # Prisma schema and client
-├── store/                 # Zustand store
-└── types/                 # TypeScript types
+src/
+├── app/                    # Next.js App Router pages
+├── components/             # UI components
+│   ├── common/             # Shared UI components
+│   ├── expenses/           # Expense-specific components
+│   ├── forms/              # Reusable form components
+│   ├── layout/             # Layout components
+│   └── ui/                 # Low-level UI components
+├── hooks/                  # Custom React hooks
+├── lib/                    # Library code
+│   ├── api/                # API client functions
+│   ├── auth/               # Auth-related utilities
+│   ├── utils/              # General utilities
+├── store/                  # Zustand stores
+├── types/                  # TypeScript type definitions
+└── styles/                 # Global styles
 ```
 
-## Future Enhancements
+## Deployment
 
-- User authentication
-- Income tracking
-- Budget planning
-- Mobile app version
-- Multiple currencies support
-- Receipt image uploads
+This application can be deployed to Vercel:
+
+1. Push your code to a GitHub repository
+2. Set up a project in Vercel
+3. Configure environment variables in Vercel
+4. Deploy!
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+[MIT License](LICENSE)

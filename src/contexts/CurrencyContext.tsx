@@ -1,44 +1,39 @@
-'use client';
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { debugLog } from '@/lib/debug';
+import { CurrencyCode, CURRENCIES } from '@/types';
+import { formatCurrency } from '@/lib/utils/formatting';
 import { useSession } from 'next-auth/react';
 
-type CurrencyContextType = {
-    currency: string;
-    setCurrency: (currency: string) => Promise<void>;
+interface CurrencyContextType {
+    currency: CurrencyCode;
+    setCurrency: (currency: CurrencyCode) => Promise<void>;
     formatAmount: (amount: number) => string;
     isLoading: boolean;
-};
+    currencySymbol: string;
+}
 
 const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined);
 
-// Currency symbols and formatting
-const currencyFormats: Record<string, { symbol: string, position: 'before' | 'after', space: boolean }> = {
-    USD: { symbol: '$', position: 'before', space: false },
-    EUR: { symbol: '€', position: 'after', space: true },
-    GBP: { symbol: '£', position: 'before', space: false },
-    INR: { symbol: '₹', position: 'before', space: false },
-    JPY: { symbol: '¥', position: 'before', space: false },
-    CNY: { symbol: '¥', position: 'before', space: false },
-    CAD: { symbol: 'C$', position: 'before', space: false },
-    AUD: { symbol: 'A$', position: 'before', space: false },
-};
+interface CurrencyProviderProps {
+    children: ReactNode;
+}
 
-export function CurrencyProvider({ children }: { children: ReactNode }) {
+export function CurrencyProvider({ children }: CurrencyProviderProps) {
     const { data: session } = useSession();
-    const [currency, setCurrencyState] = useState<string>('USD');
+    const [currency, setCurrencyState] = useState<CurrencyCode>('USD');
     const [isLoading, setIsLoading] = useState<boolean>(true);
 
-    // Use this effect to update the currency from the database directly
+    // Get current currency symbol
+    const currencySymbol = CURRENCIES.find(c => c.code === currency)?.symbol || '$';
+
+    // Fetch user's currency preference from the API
     useEffect(() => {
         const fetchCurrency = async () => {
             try {
                 setIsLoading(true);
                 const response = await fetch('/api/user/currency');
+
                 if (response.ok) {
                     const data = await response.json();
-                    debugLog('Fetched currency from API:', data.currency);
                     setCurrencyState(data.currency || 'USD');
                 }
             } catch (error) {
@@ -53,20 +48,16 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
         }
     }, [session]);
 
-    // Add this effect to handle updates from the session
+    // Update currency when session changes
     useEffect(() => {
         if (session?.user?.currency) {
-            debugLog('Currency from session:', session.user.currency);
-            setCurrencyState(session.user.currency);
+            setCurrencyState(session.user.currency as CurrencyCode);
         }
     }, [session?.user?.currency]);
 
-    // Function to update the currency
-    const setCurrency = async (newCurrency: string) => {
-        debugLog('Setting currency to:', newCurrency);
-
+    // Function to update currency preference
+    const setCurrency = async (newCurrency: CurrencyCode): Promise<void> => {
         if (newCurrency === currency) {
-            debugLog('Currency already set to:', newCurrency);
             return;
         }
 
@@ -89,11 +80,8 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
                 throw new Error('Failed to update currency');
             }
 
-            const data = await response.json();
-            debugLog('Currency updated successfully:', data);
-
-            // Force a reload to ensure everything gets updated
-            window.location.reload();
+            // Optional: Force a reload to ensure everything gets updated with new currency
+            // window.location.reload();
         } catch (error) {
             console.error('Error updating currency:', error);
             // Revert to the previous currency if there was an error
@@ -104,36 +92,33 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
         }
     };
 
-    // Function to format an amount according to the selected currency
+    // Format an amount according to the selected currency
     const formatAmount = (amount: number): string => {
-        const format = currencyFormats[currency] || currencyFormats.USD;
-        const formattedNumber = amount.toFixed(2);
-
-        if (format.position === 'before') {
-            return `${format.symbol}${format.space ? ' ' : ''}${formattedNumber}`;
-        } else {
-            return `${formattedNumber}${format.space ? ' ' : ''}${format.symbol}`;
-        }
+        return formatCurrency(amount, currency);
     };
 
-    debugLog('CurrencyContext current state:', { currency, isLoading });
+    const value = {
+        currency,
+        setCurrency,
+        formatAmount,
+        isLoading,
+        currencySymbol
+    };
 
     return (
-        <CurrencyContext.Provider value={{
-            currency,
-            setCurrency,
-            formatAmount,
-            isLoading
-        }}>
+        <CurrencyContext.Provider value={value}>
             {children}
         </CurrencyContext.Provider>
     );
 }
 
+// Custom hook to use the currency context
 export function useCurrency() {
     const context = useContext(CurrencyContext);
+
     if (context === undefined) {
         throw new Error('useCurrency must be used within a CurrencyProvider');
     }
+
     return context;
 }

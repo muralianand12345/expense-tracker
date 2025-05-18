@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth/auth';
+import { ExpenseCategory } from '@/types';
 
+/**
+ * GET handler for fetching expense summaries
+ */
 export async function GET(request: NextRequest) {
     try {
         // Get authenticated user
@@ -35,14 +39,14 @@ export async function GET(request: NextRequest) {
         });
 
         // Calculate total amount spent
-        const totalAmount: number = expenses.reduce((acc: number, expense: any): number => acc + expense.amount, 0);
+        const totalAmount = expenses.reduce((acc, expense) => acc + expense.amount, 0);
 
         // Group expenses by category
-        const categoryBreakdown: Record<string, number> = {};
+        const categoryBreakdown: { [key in ExpenseCategory]?: number } = {};
 
-        expenses.forEach((expense: any) => {
+        expenses.forEach((expense) => {
             const { category, amount } = expense;
-            categoryBreakdown[category] = (categoryBreakdown[category] || 0) + amount;
+            categoryBreakdown[category as ExpenseCategory] = (categoryBreakdown[category as ExpenseCategory] || 0) + amount;
         });
 
         // Format category breakdown for chart
@@ -51,10 +55,20 @@ export async function GET(request: NextRequest) {
             value,
         }));
 
+        // Calculate percentages
+        const withPercentages = categoryData.map(item => ({
+            ...item,
+            percentage: totalAmount > 0 ? (item.value / totalAmount) * 100 : 0,
+        }));
+
+        // Sort by value (highest first)
+        withPercentages.sort((a, b) => b.value - a.value);
+
         return NextResponse.json({
             totalAmount,
-            categoryBreakdown: categoryData,
+            categoryBreakdown: withPercentages,
             expenseCount: expenses.length,
+            averageAmount: expenses.length > 0 ? totalAmount / expenses.length : 0,
         });
     } catch (error) {
         console.error('Error generating summary:', error);

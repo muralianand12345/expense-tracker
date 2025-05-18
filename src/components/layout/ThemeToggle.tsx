@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
+import { Button } from '@/components/ui/Button';
 
-export default function ThemeToggle() {
+export function ThemeToggle() {
     const [mounted, setMounted] = useState(false);
     const { theme, setTheme } = useTheme();
 
-    // Prevent hydration mismatch
+    // Prevent hydration mismatch by only rendering after mount
     useEffect(() => {
         setMounted(true);
     }, []);
@@ -17,11 +18,12 @@ export default function ThemeToggle() {
     }
 
     return (
-        <button
-            type="button"
+        <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="rounded-md p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             aria-label="Toggle dark mode"
+            className="text-white"
         >
             {theme === 'dark' ? (
                 <svg
@@ -46,6 +48,6 @@ export default function ThemeToggle() {
                     <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
                 </svg>
             )}
-        </button>
+        </Button>
     );
 }

@@ -16,7 +16,7 @@ export const {
             if (session.user) {
                 session.user.id = token.sub as string;
 
-                // Fetch the latest user data from the database
+                // Fetch the latest user data from the database to get current currency
                 const user = await prisma.user.findUnique({
                     where: { id: token.sub as string },
                     select: { currency: true }
@@ -29,14 +29,7 @@ export const {
             }
             return session;
         },
-        async jwt({ token, user }) {
-            // On sign in, add the user data to the token
-            if (user) {
-                token.sub = user.id;
-                token.currency = user.currency;
-            }
-            return token;
-        }
+        jwt: authConfig.callbacks.jwt,
     },
     ...authConfig,
 });

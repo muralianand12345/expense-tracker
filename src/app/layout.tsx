@@ -8,7 +8,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
     title: 'Personal Expense Tracker',
-    description: 'Track and manage your expenses',
+    description: 'Track and manage your expenses efficiently',
 };
 
 export default function RootLayout({

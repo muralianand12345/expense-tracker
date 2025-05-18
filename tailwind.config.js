@@ -2,17 +2,31 @@
 module.exports = {
     darkMode: 'class',
     content: [
-        './app/**/*.{js,ts,jsx,tsx,mdx}',
-        './pages/**/*.{js,ts,jsx,tsx,mdx}',
-        './components/**/*.{js,ts,jsx,tsx,mdx}',
-        './src/**/*.{js,ts,jsx,tsx,mdx}',
+        './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
+        './src/components/**/*.{js,ts,jsx,tsx,mdx}',
+        './src/app/**/*.{js,ts,jsx,tsx,mdx}',
     ],
     theme: {
         extend: {
-            backgroundImage: {
-                'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-                'gradient-conic':
-                    'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
+            colors: {
+                // Custom colors if needed
+            },
+            fontFamily: {
+                sans: ['Inter', 'sans-serif'],
+            },
+            boxShadow: {
+                // Custom shadows if needed
+            },
+            animation: {
+                // Custom animations if needed
+            },
+            keyframes: {
+                // Custom keyframes if needed
+            },
+            typography: {
+                // Adjust typography for dark mode
+                DEFAULT: { css: {} },
+                dark: { css: {} },
             },
         },
     },

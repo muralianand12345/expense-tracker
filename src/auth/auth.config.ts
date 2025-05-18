@@ -14,29 +14,30 @@ export const authConfig: NextAuthConfig = {
     callbacks: {
         authorized({ auth, request: { nextUrl } }) {
             const isLoggedIn = !!auth?.user;
-            const isOnApp = nextUrl.pathname.startsWith("/app");
-            if (isOnApp) {
+            const protectedPaths = ['/dashboard', '/settings'];
+            const isOnProtectedPath = protectedPaths.some(path =>
+                nextUrl.pathname === path || nextUrl.pathname.startsWith(`${path}/`)
+            );
+
+            if (isOnProtectedPath) {
                 if (isLoggedIn) return true;
-                return false; // Redirect unauthenticated users to login page
-            } else if (isLoggedIn && nextUrl.pathname === "/login") {
-                return Response.redirect(new URL("/app", nextUrl));
+                return Response.redirect(new URL("/login", nextUrl));
             }
+
             return true;
         },
         session({ session, token }) {
             if (session.user && token.sub) {
                 session.user.id = token.sub;
-                // Add any other fields from token if needed, like:
+                // Add currency from token if present
                 if (token.currency) {
                     session.user.currency = token.currency as string;
-                } else {
-                    session.user.currency = 'USD'; // Default currency
                 }
             }
             return session;
         },
-        jwt({ token, user }) {
-            // Add user data to the token when first signing in
+        jwt({ token, user, account }) {
+            // Initial sign in
             if (user) {
                 token.sub = user.id;
                 token.currency = user.currency || 'USD';

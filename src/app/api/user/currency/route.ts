@@ -2,17 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth/auth';
 import { z } from 'zod';
-import { debugLog } from '@/lib/debug';
+import { CURRENCIES } from '@/types';
 
+// Create an array of valid currency codes
+const currencyCodes = CURRENCIES.map(curr => curr.code);
+
+// Validation schema for currency update
 const updateCurrencySchema = z.object({
-    currency: z.string().min(1).max(10),
+    currency: z.enum(currencyCodes as [string, ...string[]]),
 });
 
-// GET user's current currency
+/**
+ * GET the user's current currency
+ */
 export async function GET() {
     try {
         const session = await auth();
-        debugLog('GET currency - Session:', session);
 
         if (!session?.user?.id) {
             return NextResponse.json(
@@ -25,8 +30,6 @@ export async function GET() {
             where: { id: session.user.id },
             select: { currency: true },
         });
-
-        debugLog('GET currency - User data:', user);
 
         if (!user) {
             return NextResponse.json(
@@ -45,11 +48,12 @@ export async function GET() {
     }
 }
 
-// PUT update user's currency
+/**
+ * PUT update the user's currency
+ */
 export async function PUT(request: NextRequest) {
     try {
         const session = await auth();
-        debugLog('PUT currency - Session:', session);
 
         if (!session?.user?.id) {
             return NextResponse.json(
@@ -59,8 +63,6 @@ export async function PUT(request: NextRequest) {
         }
 
         const body = await request.json();
-        debugLog('PUT currency - Request body:', body);
-
         const { currency } = updateCurrencySchema.parse(body);
 
         const updatedUser = await prisma.user.update({
@@ -68,8 +70,6 @@ export async function PUT(request: NextRequest) {
             data: { currency },
             select: { currency: true },
         });
-
-        debugLog('PUT currency - Updated user:', updatedUser);
 
         return NextResponse.json(updatedUser);
     } catch (error) {

@@ -1,13 +1,13 @@
-'use client';
-
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { CATEGORIES } from '@/types';
+import { EXPENSE_CATEGORIES, ExpenseCategory } from '@/types';
+import { Button } from '@/components/ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 
 interface FilterFormData {
-    category: string;
+    category: ExpenseCategory | '';
     startDate: Date | null;
     endDate: Date | null;
 }
@@ -17,7 +17,7 @@ interface ExpenseFilterProps {
     onClearFilter: () => void;
 }
 
-export default function ExpenseFilter({ onFilter, onClearFilter }: ExpenseFilterProps) {
+export function ExpenseFilter({ onFilter, onClearFilter }: ExpenseFilterProps) {
     const [isExpanded, setIsExpanded] = useState(false);
 
     const { register, handleSubmit, control, reset } = useForm<FilterFormData>({
@@ -46,12 +46,12 @@ export default function ExpenseFilter({ onFilter, onClearFilter }: ExpenseFilter
     };
 
     return (
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg mb-6">
-            <div
-                className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center cursor-pointer"
+        <Card className="mb-6">
+            <CardHeader
+                className="cursor-pointer flex flex-row justify-between items-center"
                 onClick={() => setIsExpanded(!isExpanded)}
             >
-                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Filter Expenses</h3>
+                <CardTitle>Filter Expenses</CardTitle>
                 <button
                     type="button"
                     className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
@@ -66,12 +66,13 @@ export default function ExpenseFilter({ onFilter, onClearFilter }: ExpenseFilter
                         </svg>
                     )}
                 </button>
-            </div>
+            </CardHeader>
 
             {isExpanded && (
-                <div className="p-4">
+                <CardContent>
                     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {/* Category Filter */}
                             <div>
                                 <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                     Category
@@ -82,7 +83,7 @@ export default function ExpenseFilter({ onFilter, onClearFilter }: ExpenseFilter
                                     className="mt-1 block w-full py-2 px-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 dark:text-gray-200"
                                 >
                                     <option value="">All Categories</option>
-                                    {CATEGORIES.map((category) => (
+                                    {EXPENSE_CATEGORIES.map((category) => (
                                         <option key={category} value={category}>
                                             {category.charAt(0) + category.slice(1).toLowerCase()}
                                         </option>
@@ -90,6 +91,7 @@ export default function ExpenseFilter({ onFilter, onClearFilter }: ExpenseFilter
                                 </select>
                             </div>
 
+                            {/* Start Date Filter */}
                             <div>
                                 <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                     Start Date
@@ -103,7 +105,7 @@ export default function ExpenseFilter({ onFilter, onClearFilter }: ExpenseFilter
                                             onChange={(date: Date) => field.onChange(date)}
                                             selectsStart
                                             startDate={field.value}
-                                            endDate={undefined}
+                                            endDate={control._formValues.endDate}
                                             className="mt-1 block w-full py-2 px-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 dark:text-gray-200"
                                             placeholderText="Select start date"
                                             isClearable
@@ -112,6 +114,7 @@ export default function ExpenseFilter({ onFilter, onClearFilter }: ExpenseFilter
                                 />
                             </div>
 
+                            {/* End Date Filter */}
                             <div>
                                 <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                     End Date
@@ -124,9 +127,9 @@ export default function ExpenseFilter({ onFilter, onClearFilter }: ExpenseFilter
                                             selected={field.value}
                                             onChange={(date: Date) => field.onChange(date)}
                                             selectsEnd
-                                            startDate={undefined}
+                                            startDate={control._formValues.startDate}
                                             endDate={field.value}
-                                            minDate={undefined}
+                                            minDate={control._formValues.startDate}
                                             className="mt-1 block w-full py-2 px-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 dark:text-gray-200"
                                             placeholderText="Select end date"
                                             isClearable
@@ -136,24 +139,24 @@ export default function ExpenseFilter({ onFilter, onClearFilter }: ExpenseFilter
                             </div>
                         </div>
 
+                        {/* Filter Actions */}
                         <div className="flex justify-end space-x-3">
-                            <button
+                            <Button
                                 type="button"
+                                variant="secondary"
                                 onClick={handleClear}
-                                className="py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                             >
                                 Clear Filters
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 type="submit"
-                                className="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-700 hover:bg-indigo-700 dark:hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                             >
                                 Apply Filters
-                            </button>
+                            </Button>
                         </div>
                     </form>
-                </div>
+                </CardContent>
             )}
-        </div>
+        </Card>
     );
 }

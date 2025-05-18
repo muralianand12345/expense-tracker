@@ -2,9 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Instead of using @import which might cause issues */
-/* We'll define the datepicker styles directly here */
-
 :root {
     --foreground-rgb: 0, 0, 0;
     --background-start-rgb: 240, 240, 240;
@@ -22,24 +19,6 @@ body {
     background: linear-gradient(to bottom,
             transparent,
             rgb(var(--background-end-rgb))) rgb(var(--background-start-rgb));
-}
-
-/* Custom scrollbar for dark mode */
-.dark ::-webkit-scrollbar {
-    width: 10px;
-}
-
-.dark ::-webkit-scrollbar-track {
-    background: #1e1e1e;
-}
-
-.dark ::-webkit-scrollbar-thumb {
-    background: #4b5563;
-    border-radius: 5px;
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-    background: #6b7280;
 }
 
 /* DatePicker Dark Mode Styles */
@@ -131,4 +110,45 @@ body {
     background-color: #374151;
     border-top: 1px solid #4b5563;
     color: #d1d5db;
+}
+
+/* Custom scrollbar for dark mode */
+.dark ::-webkit-scrollbar {
+    width: 10px;
+}
+
+.dark ::-webkit-scrollbar-track {
+    background: #1e1e1e;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 5px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+}
+
+/* Common utility classes */
+@layer components {
+    .form-input {
+        @apply block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white;
+    }
+
+    .form-label {
+        @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1;
+    }
+
+    .card {
+        @apply bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden;
+    }
+
+    .card-header {
+        @apply px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700;
+    }
+
+    .card-content {
+        @apply px-4 py-5 sm:p-6;
+    }
 }
