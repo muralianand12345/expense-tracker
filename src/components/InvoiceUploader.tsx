@@ -155,11 +155,14 @@ export default function InvoiceUploader() {
         setUploadProgress(50);
 
         try {
+            // Make sure to convert the date string to a proper date format that your API expects
+            const formattedDate = invoiceData.date; // This should already be in YYYY-MM-DD format
+
             // Add the extracted expense to the store
             await addExpense({
                 amount: invoiceData.amount,
                 description: invoiceData.description,
-                date: invoiceData.date,
+                date: formattedDate,
                 category: invoiceData.type,
             });
 

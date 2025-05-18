@@ -1,9 +1,6 @@
-// src/app/api/invoices/process/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth/auth';
-import { createWorker } from 'tesseract.js';
 import { z } from 'zod';
-import { zodTextFormat } from "openai/helpers/zod";
 import OpenAI from "openai";
 import { Convert } from "easy-currencies";
 import { CATEGORIES } from '@/types';
@@ -22,45 +19,59 @@ const InvoiceEvent = z.object({
     description: z.string().describe("Description of the invoice"),
 });
 
-// Helper function to call OpenAI API with structured output
-async function parseInvoiceText(text: string) {
+// Extract invoice data directly from the image using OpenAI's Vision API
+async function extractInvoiceData(imageBuffer: Buffer): Promise<z.infer<typeof InvoiceEvent>> {
     try {
         const openai = new OpenAI({
             apiKey: process.env.OPENAI_API_KEY,
         });
 
-        const response = await openai.responses.parse({
+        // Convert buffer to base64
+        const base64Image = imageBuffer.toString('base64');
+
+        const response = await openai.chat.completions.create({
             model: "gpt-4o-mini",
-            input: [
+            messages: [
                 {
                     role: "system",
-                    content: `Extract the invoice information. Valid categories are: ${CATEGORIES.join(', ')}. 
-                   If you can't determine an exact category, map to the closest one.`
+                    content: `Extract the invoice information from the image. Return the data in a JSON format with the following fields:
+                    - date: Date in YYYY-MM-DD format
+                    - type: Category of expense from this list: ${CATEGORIES.join(', ')}. Map to the closest category if not exact.
+                    - amount: Numeric value (no currency symbol)
+                    - currency: Three-letter currency code (USD, EUR, etc.)
+                    - description: Brief description of the purchase
+                    
+                    Respond ONLY with valid JSON.`
                 },
-                { role: "user", content: text },
+                {
+                    role: "user",
+                    content: [
+                        {
+                            type: "image_url",
+                            image_url: {
+                                url: `data:image/png;base64,${base64Image}`,
+                            },
+                        },
+                    ],
+                },
             ],
-            text: {
-                format: zodTextFormat(InvoiceEvent, "event"),
-            },
+            response_format: { type: "json_object" },
+            max_tokens: 1000,
         });
 
-        return response.output_parsed;
-    } catch (error) {
-        console.error('Error in parseInvoiceText:', error);
-        throw error;
-    }
-}
+        // Parse the JSON response
+        const content = response.choices[0].message.content;
+        if (!content) {
+            throw new Error('No content in response');
+        }
 
-// Extract text from image using Tesseract
-async function extractTextFromImage(imageBuffer: Buffer): Promise<string> {
-    try {
-        const worker = await createWorker('eng');
-        const { data } = await worker.recognize(imageBuffer);
-        await worker.terminate();
-        return data.text;
+        const data = JSON.parse(content);
+
+        // Validate with the Zod schema
+        return InvoiceEvent.parse(data);
     } catch (error) {
-        console.error('Error in OCR processing:', error);
-        throw new Error('Failed to extract text from image');
+        console.error('Error processing invoice with OpenAI:', error);
+        throw new Error('Failed to extract invoice data from image');
     }
 }
 
@@ -171,7 +182,7 @@ export async function POST(request: NextRequest) {
             size: invoiceFile.size + ' bytes'
         });
 
-        // More permissive check for image files
+        // Check if the file is an image
         const isImageType = invoiceFile.type && invoiceFile.type.startsWith('image/');
         const hasImageExtension = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(invoiceFile.name);
 
@@ -189,7 +200,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Additional verification by checking file headers - ONLY if other checks fail
+        // Additional verification by checking file headers
         if (!isImageType && !hasImageExtension) {
             const isImage = await isImageBuffer(buffer);
             if (!isImage) {
@@ -200,27 +211,8 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Extract text from the image
-        const extractedText = await extractTextFromImage(buffer);
-
-        if (!extractedText.trim()) {
-            return NextResponse.json(
-                { error: 'No text could be extracted from the image' },
-                { status: 400 }
-            );
-        }
-
-        console.log("Extracted text:", extractedText);
-
-        // Parse the extracted text with OpenAI
-        const invoiceData = await parseInvoiceText(extractedText);
-
-        if (!invoiceData) {
-            return NextResponse.json(
-                { error: 'Failed to parse invoice data' },
-                { status: 400 }
-            );
-        }
+        // Process the image and extract invoice data - all in one step
+        const invoiceData = await extractInvoiceData(buffer);
 
         // Keep track of original values for currency conversion
         const originalAmount = invoiceData.amount;

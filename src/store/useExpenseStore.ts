@@ -1,3 +1,5 @@
+// src/store/useExpenseStore.ts - Updated with better error handling and debugging
+
 import { create } from 'zustand';
 import { Expense, ExpenseSummary } from '@/types';
 
@@ -36,17 +38,27 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
                 url += `?${params.toString()}`;
             }
 
-            const response = await fetch(url);
+            console.log('Fetching expenses from:', url);
+
+            const response = await fetch(url, {
+                credentials: 'include' // Important: Include credentials
+            });
+
+            console.log('Expense fetch response status:', response.status);
 
             if (!response.ok) {
-                throw new Error('Failed to fetch expenses');
+                const errorData = await response.json();
+                console.error('Error fetching expenses:', errorData);
+                throw new Error(errorData.error || 'Failed to fetch expenses');
             }
 
             const data = await response.json();
+            console.log(`Fetched ${data.length} expenses successfully`);
             set({ expenses: data, isLoading: false });
         } catch (error) {
+            console.error('Error in fetchExpenses:', error);
             set({
-                error: error instanceof Error ? error.message : 'Unknown error',
+                error: error instanceof Error ? error.message : 'Unknown error fetching expenses',
                 isLoading: false
             });
         }
@@ -66,17 +78,27 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
                 url += `?${params.toString()}`;
             }
 
-            const response = await fetch(url);
+            console.log('Fetching summary from:', url);
+
+            const response = await fetch(url, {
+                credentials: 'include'
+            });
+
+            console.log('Summary fetch response status:', response.status);
 
             if (!response.ok) {
-                throw new Error('Failed to fetch summary');
+                const errorData = await response.json();
+                console.error('Error fetching summary:', errorData);
+                throw new Error(errorData.error || 'Failed to fetch summary');
             }
 
             const data = await response.json();
+            console.log('Summary fetched successfully:', data);
             set({ summary: data, isLoading: false });
         } catch (error) {
+            console.error('Error in fetchSummary:', error);
             set({
-                error: error instanceof Error ? error.message : 'Unknown error',
+                error: error instanceof Error ? error.message : 'Unknown error fetching summary',
                 isLoading: false
             });
         }
@@ -86,16 +108,22 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
     addExpense: async (expense) => {
         set({ isLoading: true, error: null });
         try {
+            console.log('Adding expense:', expense);
+
             const response = await fetch('/api/expenses', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(expense),
+                credentials: 'include'
             });
+
+            console.log('Add expense response status:', response.status);
 
             if (!response.ok) {
                 const errorData = await response.json();
+                console.error('Error adding expense:', errorData);
                 throw new Error(errorData.error || 'Failed to add expense');
             }
 
@@ -103,8 +131,9 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
             await get().fetchExpenses();
             set({ isLoading: false });
         } catch (error) {
+            console.error('Error in addExpense:', error);
             set({
-                error: error instanceof Error ? error.message : 'Unknown error',
+                error: error instanceof Error ? error.message : 'Unknown error adding expense',
                 isLoading: false
             });
         }
@@ -114,16 +143,22 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
     updateExpense: async (id, expense) => {
         set({ isLoading: true, error: null });
         try {
+            console.log('Updating expense:', id, expense);
+
             const response = await fetch(`/api/expenses/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(expense),
+                credentials: 'include'
             });
+
+            console.log('Update expense response status:', response.status);
 
             if (!response.ok) {
                 const errorData = await response.json();
+                console.error('Error updating expense:', errorData);
                 throw new Error(errorData.error || 'Failed to update expense');
             }
 
@@ -131,8 +166,9 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
             await get().fetchExpenses();
             set({ isLoading: false });
         } catch (error) {
+            console.error('Error in updateExpense:', error);
             set({
-                error: error instanceof Error ? error.message : 'Unknown error',
+                error: error instanceof Error ? error.message : 'Unknown error updating expense',
                 isLoading: false
             });
         }
@@ -142,12 +178,18 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
     deleteExpense: async (id) => {
         set({ isLoading: true, error: null });
         try {
+            console.log('Deleting expense:', id);
+
             const response = await fetch(`/api/expenses/${id}`, {
                 method: 'DELETE',
+                credentials: 'include'
             });
+
+            console.log('Delete expense response status:', response.status);
 
             if (!response.ok) {
                 const errorData = await response.json();
+                console.error('Error deleting expense:', errorData);
                 throw new Error(errorData.error || 'Failed to delete expense');
             }
 
@@ -157,8 +199,9 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
                 isLoading: false,
             }));
         } catch (error) {
+            console.error('Error in deleteExpense:', error);
             set({
-                error: error instanceof Error ? error.message : 'Unknown error',
+                error: error instanceof Error ? error.message : 'Unknown error deleting expense',
                 isLoading: false
             });
         }
