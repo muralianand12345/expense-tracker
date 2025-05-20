@@ -24,13 +24,14 @@ async function extractInvoiceData(imageBuffer: Buffer): Promise<z.infer<typeof I
     try {
         const openai = new OpenAI({
             apiKey: process.env.OPENAI_API_KEY,
+            baseURL: process.env.OPENAI_API_BASE_URL || null,
         });
 
         // Convert buffer to base64
         const base64Image = imageBuffer.toString('base64');
 
         const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
+            model: "meta-llama/llama-4-maverick-17b-128e-instruct",
             messages: [
                 {
                     role: "system",
